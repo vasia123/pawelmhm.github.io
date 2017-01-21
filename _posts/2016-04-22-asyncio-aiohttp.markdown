@@ -36,7 +36,7 @@ just making GET and fetching one single HTTP response.
 
 In synchronous world you just do:
 
-{% highlight python %}
+```python
 
 import requests
 
@@ -46,11 +46,11 @@ def hello():
 print(hello())
 
 
-{% endhighlight %}
+```
 
 How does that look in aiohttp?
 
-{% highlight python %}
+```python
 
 #!/usr/local/bin/python3.5
 import asyncio
@@ -66,7 +66,7 @@ loop = asyncio.get_event_loop()
 
 loop.run_until_complete(hello("http://httpbin.org/headers"))
 
-{% endhighlight %}
+```
 
 hmm looks like I had to write lots of code for such a basic task...  There is "async def" and "async with" and two "awaits" here. It
 seems really confusing at first sight, let's try to explain it then. 
@@ -97,12 +97,12 @@ some time trying to understand it.
 Now let's try to do something more interesting, fetching multiple urls one after another.
 With synchronous code you would do just:
 
-{% highlight python %}
+```python
 
 for url in urls:
     print(requests.get(url).text)
 
-{% endhighlight %}
+```
 
 This is really quick and easy, async will not be that easy, so you should always consider if something more complex
 is actually necessary for your needs. If your app works nice with synchronous code maybe there
@@ -110,7 +110,7 @@ is no need to bother with async code? If you do need to bother with async code h
 that. Our `hello()` async function stays the same but we need to wrap it in asyncio [`Future`](https://docs.python.org/3/library/asyncio-task.html#future) object
 and pass whole lists of Future objects as tasks to be executed in the loop.
 
-{% highlight python %}
+```python
 
 loop = asyncio.get_event_loop()
 
@@ -122,7 +122,7 @@ for i in range(5):
     tasks.append(task)
 loop.run_until_complete(asyncio.wait(tasks))
 
-{% endhighlight %}
+```
 
 Now let's say we want to collect all responses in one list and do some 
 postprocessing on them. At the moment we're not keeping response body
@@ -131,7 +131,7 @@ print all responses at the end.
 
 To collect bunch of responses you probably need to write something along the lines of:
 
-{% highlight python %}
+```python
 
 #!/usr/local/bin/python3.5
 import asyncio
@@ -163,7 +163,7 @@ loop = asyncio.get_event_loop()
 future = asyncio.ensure_future(run(4))
 loop.run_until_complete(future)
 
-{% endhighlight %}
+```
 
 Notice usage of [`asyncio.gather()`](https://docs.python.org/3/library/asyncio-task.html#asyncio.gather), this collects bunch of Future objects in one place
 and waits for all of them to finish. 
@@ -175,14 +175,14 @@ this should be really helpful for demonstration purposes.
 
 This is how sample broken async function looks like:
 
-{% highlight python %}
+```python
 # WARNING! BROKEN CODE DO NOT COPY PASTE
 async def fetch(url):
     async with ClientSession() as session:
         async with session.get(url) as response:
             return response.read()
 
-{% endhighlight %}
+```
 
 This code is broken, but it's not that easy to figure out why
 if you dont know much about asyncio. Even if you know Python well but you dont
@@ -192,12 +192,12 @@ What is output of above function?
 
 It produces following output:
 
-{% highlight python %}
+```python
 
 pawel@pawel-VPCEH390X ~/p/l/benchmarker> ./bench.py 
 [<generator object ClientResponse.read at 0x7fa68d465728>, <generator object ClientResponse.read at 0x7fa68cdd9468>, <generator object ClientResponse.read at 0x7fa68d4656d0>, <generator object ClientResponse.read at 0x7fa68cdd9af0>]
 
-{% endhighlight %}
+```
 
 What happens here? You expected to get response objects after all processing is done, but here you actually get
 bunch of generators, why is that? 
@@ -210,13 +210,13 @@ added exactly for this purpose: to actually iterate over generator function. Fix
 is just adding await before `response.read()`.
 
 
-{% highlight python %}
+```python
     # async operation must be preceded by await 
     return await response.read() # NOT: return response.read()
-{% endhighlight %}
+```
 Let's break our code in some other way.
 
-{% highlight python %}
+```python
 
 # WARNING! BROKEN CODE DO NOT COPY PASTE
 async def run(r):
@@ -229,14 +229,14 @@ async def run(r):
     responses = asyncio.gather(*tasks)
     print(responses)
 
-{% endhighlight %}
+```
 
 Again above code is broken but it's not easy to figure out why if you're just
 learning asyncio.
 
 Above produces following output:
 
-{% highlight python %}
+```python
 pawel@pawel-VPCEH390X ~/p/l/benchmarker> ./bench.py 
 <_GatheringFuture pending>
 Task was destroyed but it is pending!
@@ -248,7 +248,7 @@ task: <Task pending coro=<fetch() running at ./bench.py:7> wait_for=<Future pend
 Task was destroyed but it is pending!
 task: <Task pending coro=<fetch() running at ./bench.py:7> wait_for=<Future pending cb=[Task._wakeup()]> cb=[gather.<locals>._done_callback(3)() at /usr/local/lib/python3.5/asyncio/tasks.py:602]>
 
-{% endhighlight %}
+```
 
 What happens here? If you examine your localhost logs you may see that requests are not reaching
 your server at all. Clearly no requests are performed. Print statement prints that
@@ -257,15 +257,15 @@ pending tasks were destroyed. Why is it happening? Again you forgot about await
 
 faulty line is this
 
-{% highlight python %}
+```python
     responses = asyncio.gather(*tasks)
-{% endhighlight %}
+```
 
 it should be:
 
-{% highlight python %}
+```python
     responses = await asyncio.gather(*tasks)
-{% endhighlight %}
+```
 
 I guess main lesson from those mistakes is: always remember about using "await" if
 you're actually awaiting something.
@@ -285,7 +285,7 @@ from response to response.
 
 Server code looks like this:
 
-{% highlight python %}
+```python
 #!/usr/local/bin/python3.5
 import asyncio
 from datetime import datetime
@@ -317,11 +317,11 @@ app = web.Application()
 app.router.add_route("GET", "/{name}", hello)
 web.run_app(app)
 
-{% endhighlight %}
+```
 
 Synchronous client looks like this:
 
-{% highlight python %}
+```python
 
 import requests
 r = 100
@@ -333,7 +333,7 @@ for i in range(r):
     d = res.headers.get("DATE")
     print("{}:{} delay {}".format(d, res.url, delay))
 
-{% endhighlight %}
+```
 
 How long will it take to run this? 
 
@@ -368,13 +368,13 @@ my client can handle.
 2.68user 0.24system 0:07.14elapsed 40%CPU (0avgtext+0avgdata 53704maxresident)k
 0inputs+0outputs (0major+14156minor)pagefaults 0swaps
 
-{% endhighlight %}
+```
 
 So 1k requests take 7 seconds, pretty nice! How about 10k? Trying to make 10k requests 
 unfortunately fails...
 
 
-{% highlight python %}
+```python
 
 responses are <_GatheringFuture finished exception=ClientOSError(24, 'Cannot connect to host localhost:8080 ssl:False [Can not connect to localhost:8080 [Too many open files]]')>
 Traceback (most recent call last):
@@ -384,7 +384,7 @@ Traceback (most recent call last):
   File "/usr/local/lib/python3.5/socket.py", line 134, in __init__
 OSError: [Errno 24] Too many open files
 
-{% endhighlight %}
+```
 
 That's bad, seems like I stumbled across [10k connections problem](http://www.webcitation.org/6ICibHuyd). 
 
@@ -398,7 +398,7 @@ by adding [`asyncio.Semaphore()`](https://docs.python.org/3/library/asyncio-sync
 
 Modified client code looks like this now:
 
-{% highlight python %}
+```python
 # modified fetch function with semaphore
 import random
 import asyncio
@@ -441,7 +441,7 @@ loop = asyncio.get_event_loop()
 future = asyncio.ensure_future(run(number))
 loop.run_until_complete(future)
 
-{% endhighlight %}
+```
 
 At this point I can process 10k urls. It takes 23 seconds and returns some exceptions but overall
 it's pretty nice!
@@ -452,7 +452,7 @@ you can see that ram usage gets pretty high at this point, cpu usage is around
 100% all the time. What I find interesting is that my server takes significantly less cpu than client.
 Here's snapshot of linux `ps` output.
 
-{% highlight python %}
+```python
 
 pawel@pawel-VPCEH390X ~/p/l/benchmarker> ps ua | grep python
 
@@ -460,15 +460,15 @@ USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
 pawel     2447 56.3  1.0 216124 64976 pts/9    Sl+  21:26   1:27 /usr/local/bin/python3.5 ./test_server.py
 pawel     2527  101  3.5 674732 212076 pts/0   Rl+  21:26   2:30 /usr/local/bin/python3.5 ./bench.py
 
-{% endhighlight %}
+```
 
 Overall it took around 53 seconds to process.
 
-{% highlight python %}
+```python
 53.86user 1.58system 0:55.53elapsed 99%CPU (0avgtext+0avgdata 419216maxresident)k
 0inputs+0outputs (0major+110195minor)pagefaults 0swaps
 
-{% endhighlight %}
+```
 
 Pretty powerful if you ask me.
 
@@ -482,7 +482,7 @@ to explode when testing that.
 530.86user 13.81system 9:05.17elapsed 99%CPU (0avgtext+0avgdata 3811640maxresident)k
 0inputs+0outputs (0major+942576minor)pagefaults 0swaps
 
-{% endhighlight %}
+```
 
 It means average request per minute rate of 111 111. Impressive.
 
